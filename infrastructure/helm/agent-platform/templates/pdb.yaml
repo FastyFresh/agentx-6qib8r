@@ -1,0 +1,105 @@
+{{/* Generate PodDisruptionBudgets for all services */}}
+{{- range $service, $config := .Values.services }}
+{{- if $config.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "agent-platform.componentName" (dict "component" $service "context" $) }}
+  labels:
+    {{- include "agent-platform.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $service }}
+  annotations:
+    {{- include "agent-platform.istioAnnotations" $ | nindent 4 }}
+    {{- include "agent-platform.monitoringAnnotations" $ | nindent 4 }}
+    pdb.kubernetes.io/monitoring: "true"
+    pdb.kubernetes.io/violation-rate: "1h"
+spec:
+  {{- if eq $.Values.global.environment "production" }}
+  # Production environment requires higher availability
+  minAvailable: {{ $config.autoscaling.minReplicas | default 3 }}
+  {{- else }}
+  # Non-production environments can tolerate more disruption
+  minAvailable: {{ div ($config.autoscaling.minReplicas | default 2) 2 | ceil }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "agent-platform.name" $ }}
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+      app.kubernetes.io/component: {{ $service }}
+{{- end }}
+{{- end }}
+
+{{/* Generate PodDisruptionBudgets for dependencies if enabled */}}
+{{- if .Values.dependencies.postgresql.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "agent-platform.componentName" (dict "component" "postgresql" "context" $) }}
+  labels:
+    {{- include "agent-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+  annotations:
+    pdb.kubernetes.io/monitoring: "true"
+    pdb.kubernetes.io/violation-rate: "1h"
+spec:
+  {{- if eq .Values.global.environment "production" }}
+  minAvailable: 2
+  {{- else }}
+  minAvailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{- if .Values.dependencies.redis.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "agent-platform.componentName" (dict "component" "redis" "context" $) }}
+  labels:
+    {{- include "agent-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+  annotations:
+    pdb.kubernetes.io/monitoring: "true"
+    pdb.kubernetes.io/violation-rate: "1h"
+spec:
+  {{- if eq .Values.global.environment "production" }}
+  minAvailable: 2
+  {{- else }}
+  minAvailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/* Generate PodDisruptionBudget for Istio components if enabled */}}
+{{- if .Values.dependencies.istio.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "agent-platform.componentName" (dict "component" "istiod" "context" $) }}
+  labels:
+    {{- include "agent-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: istiod
+  annotations:
+    pdb.kubernetes.io/monitoring: "true"
+    pdb.kubernetes.io/violation-rate: "1h"
+spec:
+  {{- if eq .Values.global.environment "production" }}
+  minAvailable: 2
+  {{- else }}
+  minAvailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      app: istiod
+      istio: pilot
+{{- end }}
