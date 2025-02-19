@@ -1,0 +1,87 @@
+{{- if .Values.global.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-ingress
+  annotations:
+    # Core ingress configuration
+    kubernetes.io/ingress.class: {{ .Values.global.ingress.className | default "nginx" | quote }}
+    
+    # TLS and certificate management
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    
+    # Security headers and configurations
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-prefer-server-ciphers: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "1800"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "1800"
+    
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      
+    # Istio integration
+    networking.istio.io/v1alpha3: "true"
+    
+    {{- if .Values.global.ingress.annotations }}
+    {{- toYaml .Values.global.ingress.annotations | nindent 4 }}
+    {{- end }}
+
+spec:
+  ingressClassName: {{ .Values.global.ingress.className | default "nginx" | quote }}
+  tls:
+    - hosts:
+        - "*.agent-platform.com"
+        - "api.agent-platform.com"
+        - "app.agent-platform.com"
+      secretName: {{ .Release.Name }}-tls
+  rules:
+    # API Gateway routing
+    - host: api.agent-platform.com
+      http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-api-gateway
+                port:
+                  number: 80
+          - path: /metrics
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-monitoring
+                port:
+                  number: 80
+    
+    # Web Frontend routing
+    - host: app.agent-platform.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-web-frontend
+                port:
+                  number: 80
+    
+    # Integration service routing
+    - host: integration.agent-platform.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-integration-service
+                port:
+                  number: 80
+
+{{- end }}
