@@ -1,0 +1,193 @@
+name: Enhanced Continuous Deployment
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - develop
+  release:
+    types: [published]
+
+# Ensure only one deployment workflow runs at a time per environment
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOCKER_BUILDKIT: '1'
+  COMPOSE_DOCKER_CLI_BUILD: '1'
+  TF_IN_AUTOMATION: 'true'
+  SECURITY_SCAN_ENABLED: 'true'
+  PROGRESSIVE_ROLLOUT: 'true'
+  HELM_VERSION: '3.12.0'
+  KUBECTL_VERSION: '1.27.0'
+  NAMESPACE: 'agent-platform'
+
+jobs:
+  security-scan:
+    name: Security Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@v0.10.0
+        with:
+          scan-type: 'fs'
+          severity: 'CRITICAL,HIGH'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  deploy-dev:
+    name: Deploy to Development
+    needs: security-scan
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Deploy to Development
+        run: |
+          chmod +x infrastructure/scripts/deploy.sh
+          ./infrastructure/scripts/deploy.sh \
+            "dev" \
+            "${{ env.NAMESPACE }}" \
+            "false"
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG_DEV }}
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: security-scan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Deploy to Staging
+        run: |
+          chmod +x infrastructure/scripts/deploy.sh
+          ./infrastructure/scripts/deploy.sh \
+            "staging" \
+            "${{ env.NAMESPACE }}" \
+            "false"
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG_STAGING }}
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: [security-scan, deploy-staging]
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+    environment: production
+    strategy:
+      matrix:
+        region: [us-east-1, eu-west-1]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ matrix.region }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Deploy to Production
+        run: |
+          chmod +x infrastructure/scripts/deploy.sh
+          ./infrastructure/scripts/deploy.sh \
+            "prod" \
+            "${{ env.NAMESPACE }}" \
+            "true"
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG_PROD }}
+
+  notify:
+    name: Notify Deployment Status
+    needs: [deploy-dev, deploy-staging, deploy-prod]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Status Notification
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const deployStatus = {
+              dev: '${{ needs.deploy-dev.result }}',
+              staging: '${{ needs.deploy-staging.result }}',
+              prod: '${{ needs.deploy-prod.result }}'
+            };
+            
+            const message = Object.entries(deployStatus)
+              .map(([env, status]) => `${env}: ${status}`)
+              .join('\n');
+              
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.name,
+              body: `Deployment Status:\n${message}`
+            });
