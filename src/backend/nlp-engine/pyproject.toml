@@ -1,0 +1,78 @@
+[build-system]
+requires = ["poetry-core>=1.6.1"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "nlp-engine"
+version = "0.1.0"
+description = "High-performance NLP Engine service for AGENT AI Platform with sub-200ms response time"
+authors = ["AGENT AI Platform Team"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.100.0"
+tensorflow = "^2.13.0"
+transformers = "^4.30.0"
+langchain = "^0.0.27"
+pydantic = "^2.0.0"
+prometheus-client = "^0.17.0"
+python-jose = "^3.3.0"
+uvicorn = "^0.23.0"
+gunicorn = "^21.0.0"
+asyncio = "^3.4.3"
+numpy = "^1.24.0"
+scipy = "^1.11.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.21.0"
+pytest-benchmark = "^4.0.0"
+black = "^23.3.0"
+isort = "^5.12.0"
+mypy = "^1.4.0"
+flake8 = "^6.0.0"
+bandit = "^1.7.5"
+safety = "^2.3.0"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+include = "src/**/*.py"
+extend-exclude = "/tests/"
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 100
+known_first_party = ["nlp_engine"]
+known_third_party = ["fastapi", "tensorflow", "transformers"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+disallow_any_generics = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=src --cov-report=xml --cov-report=term-missing --benchmark-only"
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = ["tests/*", "setup.py"]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]
+targets = ["src"]
