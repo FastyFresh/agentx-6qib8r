@@ -1,0 +1,111 @@
+Thank you for installing {{ include "agent-platform.fullname" . }} version {{ .Chart.AppVersion }}!
+
+======================================================================================
+ENVIRONMENT: {{ .Values.global.environment | upper }}
+REGION(S): {{ join ", " .Values.global.multiRegion.regions }}
+======================================================================================
+
+ACCESS INFORMATION
+-----------------
+Primary Service Endpoints:
+{{- if .Values.global.multiRegion.enabled }}
+{{- range .Values.global.multiRegion.regions }}
+Region {{ . }}:
+  https://{{ . }}.{{ $.Values.global.environment }}.agent-platform.example.com
+{{- end }}
+{{- else }}
+  https://{{ .Values.global.environment }}.agent-platform.example.com
+{{- end }}
+
+CREDENTIAL RETRIEVAL
+-------------------
+1. API Key (requires MFA):
+   kubectl get secret --namespace {{ .Release.Namespace }} {{ include "agent-platform.fullname" . }}-api-key \
+     -o jsonpath="{.data.api-key}" | base64 --decode
+
+2. Service Account Token:
+   kubectl get secret --namespace {{ .Release.Namespace }} {{ include "agent-platform.fullname" . }}-sa-token \
+     -o jsonpath="{.data.token}" | base64 --decode
+
+HEALTH VERIFICATION
+-----------------
+1. Check Pod Status:
+   kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+2. Verify Service Mesh:
+   kubectl get virtualservice,gateway --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+3. Monitor Service Health:
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "agent-platform.fullname" . }}-prometheus 9090:9090
+   Visit http://localhost:9090 for metrics
+
+SECURITY VERIFICATION
+-------------------
+1. Verify Security Policies:
+   kubectl get psp,networkpolicy --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+2. Check Encryption Status:
+{{- if .Values.global.security.encryption.enabled }}
+   Encryption is ENABLED using {{ .Values.global.security.encryption.provider }}
+   Key Rotation Interval: {{ .Values.global.security.encryption.keyRotationInterval }} days
+{{- else }}
+   WARNING: Encryption is DISABLED
+{{- end }}
+
+3. Verify Authentication:
+{{- if .Values.global.security.auth.mfa.enabled }}
+   MFA is ENABLED using {{ .Values.global.security.auth.mfa.provider }}
+   Supported methods: {{ join ", " .Values.global.security.auth.mfa.methods }}
+{{- else }}
+   WARNING: MFA is DISABLED
+{{- end }}
+
+COMPLIANCE VERIFICATION
+---------------------
+1. SOC 2 Compliance:
+   - Verify audit logging is enabled
+   - Check access controls
+   - Review encryption settings
+
+2. GDPR Requirements:
+   - Verify data encryption at rest
+   - Check data retention policies
+   - Review access logs
+
+3. PCI DSS (if applicable):
+   - Verify network segmentation
+   - Check encryption standards
+   - Review authentication methods
+
+NEXT STEPS
+----------
+1. Configure environment-specific settings:
+   helm upgrade {{ .Release.Name }} agent-platform \
+     --namespace {{ .Release.Namespace }} \
+     --set global.environment={{ .Values.global.environment }} \
+     --reuse-values
+
+2. Set up monitoring alerts:
+   kubectl apply -f custom-alerts.yaml --namespace {{ .Release.Namespace }}
+
+3. Configure backup schedules:
+   kubectl apply -f backup-schedules.yaml --namespace {{ .Release.Namespace }}
+
+TROUBLESHOOTING
+--------------
+1. View application logs:
+   kubectl logs -f --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+2. Check service mesh status:
+   istioctl analyze --namespace {{ .Release.Namespace }}
+
+3. Verify database connectivity:
+   kubectl exec -it --namespace {{ .Release.Namespace }} \
+     {{ include "agent-platform.fullname" . }}-postgresql-0 -- psql -U agent_platform -d agent_platform
+
+For additional support, please contact:
+- Platform Team: platform-team@agent-ai.com
+- Security Team: security@agent-ai.com
+
+Documentation: https://agent-platform.example.com/docs
+======================================================================================
