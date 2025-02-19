@@ -1,0 +1,39 @@
+{
+  "watch": [
+    "src/**/*.ts",
+    "src/**/*.json"
+  ],
+  "ext": "ts,json",
+  "ignore": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**"
+  ],
+  "exec": "ts-node --project tsconfig.json src/index.ts",
+  "verbose": true,
+  "delay": 1000,
+  "env": {
+    "NODE_ENV": "development",
+    "TS_NODE_PROJECT": "./tsconfig.json"
+  },
+  "legacyWatch": false,
+  "restartable": "rs",
+  "colours": true,
+  "events": {
+    "start": "clear || cls",
+    "restart": "clear || cls"
+  },
+  "signal": "SIGTERM",
+  "stdout": true,
+  "stdin": false,
+  "quiet": false,
+  "watch_options": {
+    "followSymlinks": false,
+    "usePolling": false,
+    "interval": 1000,
+    "binaryInterval": 1000
+  }
+}
