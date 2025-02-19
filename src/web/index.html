@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <!-- Character encoding and viewport settings -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    
+    <!-- Primary meta tags -->
+    <meta name="theme-color" content="#2196F3">
+    <meta name="description" content="AGENT AI Platform - No-code solution for creating and managing AI agents through natural language interactions">
+    <meta name="keywords" content="AI, automation, no-code, agents, natural language, business process">
+    <meta name="author" content="AGENT AI Platform Team">
+    
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="AGENT AI Platform">
+    <meta property="og:description" content="Create and manage AI agents through natural language">
+    <meta property="og:type" content="website">
+    
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="AGENT AI Platform">
+    <meta name="twitter:description" content="AI agent automation platform">
+    
+    <!-- Resource hints for performance optimization -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Favicons and app icons -->
+    <link rel="icon" href="favicon.ico" sizes="32x32">
+    <link rel="icon" href="favicon-16x16.png" sizes="16x16">
+    <link rel="icon" href="favicon-32x32.png" sizes="32x32">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Primary font preload -->
+    <link 
+        rel="preload" 
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+        as="style"
+        onload="this.onload=null;this.rel='stylesheet'"
+    >
+    
+    <!-- Critical CSS inline styles -->
+    <style>
+        :root {
+            --color-primary: #2196F3;
+            --color-background: #F5F5F5;
+            --font-family: 'Roboto', system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-family);
+            background-color: var(--color-background);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        #root {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .noscript-message {
+            display: block;
+            padding: 20px;
+            text-align: center;
+            font-family: system-ui;
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+    
+    <title>AGENT AI Platform</title>
+</head>
+<body>
+    <!-- Application root -->
+    <div 
+        id="root" 
+        role="application" 
+        aria-label="AGENT AI Platform Application"
+    ></div>
+    
+    <!-- No JavaScript fallback -->
+    <noscript>
+        <div class="noscript-message">
+            JavaScript must be enabled to run this application
+        </div>
+    </noscript>
+    
+    <!-- Application entry script -->
+    <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
