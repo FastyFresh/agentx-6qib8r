@@ -1,0 +1,69 @@
+# Grafana Datasource Configuration v9.5.0
+# Configures Prometheus as the primary data source for AGENT AI Platform monitoring
+
+apiVersion: 1
+
+# Datasource configurations
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    version: 1
+    editable: true
+    jsonData:
+      # Align with Prometheus global scrape interval from prometheus.yml
+      timeInterval: "15s"
+      queryTimeout: "30s"
+      httpMethod: "POST"
+      manageAlerts: true
+      prometheusType: "Prometheus"
+      # Match version with imported prometheus.yml
+      prometheusVersion: "2.45.0"
+      # Performance optimization settings
+      cacheLevel: "high"
+      maxSamples: 50000
+      # Distributed tracing configuration
+      exemplarTraceIdDestinations:
+        - name: "trace_id"
+          datasourceUid: "jaeger"
+      # Alert management configuration
+      alertingEnabled: true
+      alertTimeout: "30s"
+      scrapeTimeout: "15s"
+      # Additional performance settings
+      disableMetricsLookup: false
+      incrementalQueryAlignment: true
+      customQueryParameters: ""
+      # High availability settings
+      failoverToBackupServer: true
+      backupServerList: 
+        - "prometheus-backup:9090"
+    
+    # Security settings - template for secure credentials
+    secureJsonData: {}
+      # Uncomment and configure if basic auth is required
+      # basicAuthPassword: "${PROMETHEUS_PASSWORD}"
+      # httpHeaderValue1: "${PROMETHEUS_API_KEY}"
+
+    # Connection testing and validation
+    jsonDataTest:
+      timeout: 10
+      retries: 3
+      retryTimeout: 2000
+
+    # Default query options
+    queryOptions:
+      maxDataPoints: 50000
+      minInterval: "15s"
+      intervalFactor: 2
+      timeout: "30s"
+
+    # TLS/SSL Configuration
+    tlsAuth: false
+    tlsAuthWithCACert: false
+    tlsSkipVerify: false
+
+    # Custom HTTP headers
+    httpHeaders: []
