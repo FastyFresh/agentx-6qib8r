@@ -1,0 +1,216 @@
+/* Core layout stylesheet for AGENT AI Platform
+ * Implements F-pattern (desktop) and Z-pattern (mobile) layouts
+ * Material Design 3.0 integration
+ * Version: 1.0.0
+ */
+
+/* Import layout variables */
+@import './variables.css';
+
+/* Container - Main wrapper with responsive behavior */
+.container {
+  width: 100%;
+  max-width: var(--breakpoint-large);
+  margin: 0 auto;
+  padding: 0 var(--spacing-unit);
+  box-sizing: border-box;
+}
+
+/* Main Layout - F-pattern for desktop, Z-pattern for mobile */
+.main-layout {
+  display: grid;
+  grid-template-areas:
+    "header header"
+    "sidebar main"
+    "footer footer";
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  gap: var(--spacing-unit);
+}
+
+/* Grid System */
+.grid {
+  display: grid;
+  gap: var(--spacing-unit);
+}
+
+.responsive-grid {
+  display: grid;
+  gap: var(--spacing-unit);
+  grid-template-columns: repeat(12, 1fr);
+}
+
+/* Flex Utilities */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.flex-row {
+  flex-direction: row;
+}
+
+/* Z-pattern Layout (Mobile-specific) */
+.z-pattern {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit);
+}
+
+/* Responsive Margin Utilities */
+.m-0 { margin: 0; }
+.m-1 { margin: var(--spacing-scale-1); }
+.m-2 { margin: var(--spacing-scale-2); }
+.m-3 { margin: var(--spacing-scale-3); }
+.m-4 { margin: var(--spacing-scale-4); }
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: var(--spacing-scale-1); }
+.mt-2 { margin-top: var(--spacing-scale-2); }
+.mt-3 { margin-top: var(--spacing-scale-3); }
+.mt-4 { margin-top: var(--spacing-scale-4); }
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: var(--spacing-scale-1); }
+.mb-2 { margin-bottom: var(--spacing-scale-2); }
+.mb-3 { margin-bottom: var(--spacing-scale-3); }
+.mb-4 { margin-bottom: var(--spacing-scale-4); }
+
+.ml-0 { margin-left: 0; }
+.ml-1 { margin-left: var(--spacing-scale-1); }
+.ml-2 { margin-left: var(--spacing-scale-2); }
+.ml-3 { margin-left: var(--spacing-scale-3); }
+.ml-4 { margin-left: var(--spacing-scale-4); }
+
+.mr-0 { margin-right: 0; }
+.mr-1 { margin-right: var(--spacing-scale-1); }
+.mr-2 { margin-right: var(--spacing-scale-2); }
+.mr-3 { margin-right: var(--spacing-scale-3); }
+.mr-4 { margin-right: var(--spacing-scale-4); }
+
+/* Responsive Breakpoints */
+@media screen and (max-width: 767px) {
+  .container {
+    padding: 0 calc(var(--spacing-unit) / 2);
+  }
+
+  .main-layout {
+    grid-template-areas:
+      "header"
+      "main"
+      "sidebar"
+      "footer";
+    grid-template-columns: 1fr;
+  }
+
+  .responsive-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .z-pattern {
+    /* Mobile Z-pattern flow */
+    & > * {
+      width: 100%;
+    }
+    
+    & > *:nth-child(odd) {
+      align-self: flex-start;
+    }
+    
+    & > *:nth-child(even) {
+      align-self: flex-end;
+    }
+  }
+}
+
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    padding: 0 var(--spacing-unit);
+  }
+
+  .main-layout {
+    grid-template-areas:
+      "header header"
+      "main sidebar"
+      "footer footer";
+    grid-template-columns: 1fr auto;
+  }
+
+  .responsive-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .container {
+    padding: 0 calc(var(--spacing-unit) * 2);
+  }
+
+  .responsive-grid {
+    grid-template-columns: repeat(12, 1fr);
+  }
+}
+
+/* Grid Area Assignments */
+.header-area {
+  grid-area: header;
+}
+
+.main-area {
+  grid-area: main;
+}
+
+.sidebar-area {
+  grid-area: sidebar;
+}
+
+.footer-area {
+  grid-area: footer;
+}
+
+/* Material Design 3.0 Elevation System */
+.elevation-1 {
+  box-shadow: var(--shadow-sm);
+}
+
+.elevation-2 {
+  box-shadow: var(--shadow-md);
+}
+
+.elevation-3 {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Layout Utilities */
+.full-width {
+  width: 100%;
+}
+
+.full-height {
+  height: 100%;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.position-relative {
+  position: relative;
+}
+
+.position-absolute {
+  position: absolute;
+}
+
+/* Z-index Utilities */
+.z-dropdown {
+  z-index: var(--z-index-dropdown);
+}
+
+.z-modal {
+  z-index: var(--z-index-modal);
+}
