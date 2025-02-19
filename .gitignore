@@ -1,0 +1,166 @@
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.env
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.pytest_cache/
+.python-version
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Environment
+.env
+.env.*
+.env.local
+.env.development
+.env.test
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+.project
+.classpath
+.settings/
+*.iml
+*.iws
+.idea_modules/
+
+# Testing
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+htmlcov/
+
+# System
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Infrastructure
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+.terraformrc
+terraform.rc
+*.tfplan
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+.kube/
+*.yaml.dec
+
+# Docker
+.docker/
+*.dockerfile
+.dockerignore
+docker-compose.override.yml
+
+# Security
+*.pem
+*.key
+*.crt
+*.csr
+*.cer
+*.der
+*.p12
+*.pfx
+*.p7b
+*.keystore
+*.truststore
+.gnupg/
+.ssh/
+
+# Temporary
+*.tmp
+*.temp
+tmp/
+temp/
+.cache/
+.local/
+
+# Build
+dist/
+build/
+out/
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Dependencies
+vendor/
+jspm_packages/
+bower_components/
+.pnp/
+.pnp.js
+
+# Misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.bak
+*.swp
+*.swo
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
