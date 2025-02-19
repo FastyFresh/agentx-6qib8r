@@ -1,0 +1,111 @@
+{{/* Generate ConfigMaps for AGENT AI Platform services */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "agent-platform.fullname" . }}-config
+  labels:
+    {{- include "agent-platform.labels" . | nindent 4 }}
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    security.agent.ai/config-validation: "enabled"
+    security.agent.ai/last-updated: {{ now | quote }}
+data:
+  {{/* API Gateway Configuration */}}
+  api-gateway.yaml: |
+    # Kong API Gateway Configuration
+    admin:
+      url: {{ .Values.services.apiGateway.adminUrl | default "http://localhost:8001" }}
+      {{- if .Values.global.security.enabled }}
+      ssl: true
+      ssl_verify: true
+      {{- end }}
+    proxy:
+      url: {{ .Values.services.apiGateway.proxyUrl | default "http://localhost:8000" }}
+      {{- if .Values.global.security.enabled }}
+      ssl: true
+      ssl_verify: true
+      {{- end }}
+    rate_limiting:
+      enabled: true
+      per_minute: {{ .Values.services.apiGateway.rateLimit.perMinute | default 100 }}
+      policy: local
+    cors:
+      enabled: true
+      origins: {{ .Values.services.apiGateway.cors.origins | default (list "*") | toYaml | nindent 8 }}
+      methods: 
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Authorization
+        - Content-Type
+    logging:
+      level: {{ .Values.global.environment | eq "production" | ternary "warn" "debug" }}
+      format: json
+
+  {{/* Agent Generator Service Configuration */}}
+  agent-generator.yaml: |
+    # Agent Generator Service Configuration
+    environment: {{ .Values.global.environment }}
+    port: {{ .Values.services.agentGenerator.port | default 3000 }}
+    api:
+      version: "v1"
+      timeout: {{ .Values.services.agentGenerator.timeout | default 30 }}
+    metrics:
+      enabled: true
+      retention_days: {{ .Values.services.agentGenerator.metrics.retention | default 30 }}
+      prometheus:
+        endpoint: "/metrics"
+        port: 9090
+    security:
+      {{- if .Values.global.security.enabled }}
+      auth:
+        provider: {{ .Values.global.security.auth.provider }}
+        jwt_validation: true
+        mfa_enabled: {{ .Values.global.security.auth.mfa.enabled }}
+      encryption:
+        enabled: {{ .Values.global.security.encryption.enabled }}
+        provider: {{ .Values.global.security.encryption.provider }}
+      {{- end }}
+
+  {{/* Integration Service Configuration */}}
+  integration-service.yaml: |
+    # Integration Service Configuration
+    environment: {{ .Values.global.environment }}
+    integrations:
+      zoho_crm:
+        base_url: {{ .Values.services.integration.zoho.baseUrl | default "https://www.zohoapis.com/crm/v3" }}
+        version: "v3"
+        timeout: {{ .Values.services.integration.zoho.timeout | default 30 }}
+        retry:
+          attempts: {{ .Values.services.integration.zoho.retry.attempts | default 3 }}
+          backoff: {{ .Values.services.integration.zoho.retry.backoff | default "exponential" }}
+      rms:
+        base_url: {{ .Values.services.integration.rms.baseUrl | default "https://api.rms.example.com/v1" }}
+        version: "v1"
+        timeout: {{ .Values.services.integration.rms.timeout | default 30 }}
+        retry:
+          attempts: {{ .Values.services.integration.rms.retry.attempts | default 3 }}
+          backoff: {{ .Values.services.integration.rms.retry.backoff | default "exponential" }}
+    security:
+      {{- if .Values.global.security.enabled }}
+      tls:
+        enabled: true
+        verify: true
+      rate_limiting:
+        enabled: true
+        per_minute: {{ .Values.services.integration.rateLimit.perMinute | default 60 }}
+      audit_logging:
+        enabled: true
+        retention_days: {{ .Values.services.integration.auditLog.retention | default 90 }}
+      {{- end }}
+    monitoring:
+      metrics:
+        enabled: true
+        endpoint: "/metrics"
+        port: 9090
+      logging:
+        level: {{ .Values.global.environment | eq "production" | ternary "info" "debug" }}
+        format: json
