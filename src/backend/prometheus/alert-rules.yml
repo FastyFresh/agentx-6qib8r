@@ -1,0 +1,76 @@
+# Prometheus Alert Rules Configuration v2.45.0
+# Defines comprehensive monitoring rules for system health, performance, and resource utilization
+
+groups:
+  # HTTP-related alerts for monitoring API and service performance
+  - name: http_alerts
+    rules:
+      # Alert when average HTTP response time exceeds 200ms threshold
+      - alert: HighResponseTime
+        expr: rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m]) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: High HTTP response time detected
+          description: Average response time is above 200ms threshold for 5 minutes
+          dashboard: "{{ $labels.dashboard_url }}"
+          runbook: "{{ $labels.runbook_url }}"
+
+      # Alert when HTTP error rate exceeds 1%
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          category: reliability
+        annotations:
+          summary: High HTTP error rate detected
+          description: Error rate is above 1% threshold for 5 minutes
+          value: "{{ $value | humanizePercentage }}"
+          dashboard: "{{ $labels.dashboard_url }}"
+
+  # System-level alerts for monitoring resource utilization and availability
+  - name: system_alerts
+    rules:
+      # Alert when memory usage exceeds 85%
+      - alert: HighMemoryUsage
+        expr: system_memory_usage_bytes / system_memory_total_bytes > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          category: resource
+        annotations:
+          summary: High memory usage detected
+          description: System memory usage is above 85% for 10 minutes
+          value: "{{ $value | humanizePercentage }}"
+          instance: "{{ $labels.instance }}"
+
+      # Alert when any monitored service goes down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: Service is down
+          description: "{{ $labels.job }} service on {{ $labels.instance }} is not responding for 1 minute"
+          runbook: "{{ $labels.runbook_url }}"
+
+  # Agent-specific alerts for monitoring AI agent operations
+  - name: agent_alerts
+    rules:
+      # Alert when agent operation failure rate exceeds 2%
+      - alert: HighAgentFailureRate
+        expr: sum(rate(agent_operations_total{status="failed"}[5m])) / sum(rate(agent_operations_total[5m])) > 0.02
+        for: 5m
+        labels:
+          severity: critical
+          category: agents
+        annotations:
+          summary: High agent failure rate detected
+          description: Agent operation failure rate is above 2% for 5 minutes
+          value: "{{ $value | humanizePercentage }}"
+          affected_agents: "{{ $labels.agent_id }}"
