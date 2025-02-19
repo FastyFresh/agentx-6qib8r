@@ -1,0 +1,121 @@
+{{- $root := . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agent-platform.fullname" . }}-{{ .Values.service.name }}
+  labels:
+    {{- include "agent-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Values.service.name }}
+    security.agent-platform.io/profile: {{ .Values.security.profile | default "restricted" }}
+  annotations:
+    {{- include "agent-platform.monitoringAnnotations" . | nindent 4 }}
+    {{- include "agent-platform.istioAnnotations" . | nindent 4 }}
+    backup.velero.io/backup-volumes: {{ .Values.backup.volumes | default "data" }}
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.global.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "agent-platform.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Values.service.name }}
+  template:
+    metadata:
+      labels:
+        {{- include "agent-platform.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Values.service.name }}
+        security.agent-platform.io/profile: {{ .Values.security.profile | default "restricted" }}
+      annotations:
+        {{- include "agent-platform.monitoringAnnotations" . | nindent 8 }}
+        {{- include "agent-platform.istioAnnotations" . | nindent 8 }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- include "agent-platform.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "agent-platform.fullname" . }}-{{ .Values.service.name }}
+      securityContext:
+        {{- include "agent-platform.podSecurityContext" . | nindent 8 }}
+      {{- include "agent-platform.regionalAffinity" . | nindent 6 }}
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: {{ .Values.service.name }}
+          image: "{{ .Values.global.image.registry }}/{{ .Values.services.nlp-engine.image.repository }}:{{ .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          securityContext:
+            {{- include "agent-platform.containerSecurityContext" . | nindent 12 }}
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port | default 8080 }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.global.monitoring.metricsPort | default 9090 }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+          resources:
+            {{- with .Values.services.nlp-engine.resources }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "agent-platform.fullname" . }}-{{ .Values.service.name }}-config
+        - name: tmp
+          emptyDir: {}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "agent-platform.fullname" . }}-{{ .Values.service.name }}-data
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
