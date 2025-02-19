@@ -1,0 +1,122 @@
+# Staging environment configuration for AGENT AI Platform
+# Version: 1.0.0
+
+global:
+  environment: staging
+  replicaCount: 2  # Reduced replica count for staging
+  
+  image:
+    registry: docker.io
+    pullPolicy: Always  # Ensure latest staging images are pulled
+    tag: staging
+
+  ingress:
+    enabled: true
+    className: istio
+    annotations:
+      kubernetes.io/ingress.class: istio
+      cert-manager.io/cluster-issuer: letsencrypt-staging
+    hosts:
+      - host: staging.agent-platform.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      enabled: true
+      secretName: staging-tls-secret
+
+  security:
+    enabled: true
+    auth:
+      provider: auth0
+      domain: staging-agent-platform.auth0.com
+      jwtValidation: true
+      mfa:
+        enabled: true
+        provider: auth0
+    encryption:
+      enabled: true
+      provider: aws-kms
+      keyId: staging-encryption-key
+
+services:
+  api-gateway:
+    enabled: true
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 75
+
+  nlp-engine:
+    enabled: true
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 75
+
+  agent-generator:
+    enabled: true
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 4
+      targetCPUUtilizationPercentage: 75
+
+dependencies:
+  istio:
+    enabled: true
+    gateways:
+      enabled: true
+      replicaCount: 2
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+
+  prometheus:
+    enabled: true
+    alertmanager:
+      enabled: true
+      replicaCount: 1
+      persistence:
+        enabled: true
+        size: 10Gi
+    server:
+      replicaCount: 1
+      retention: 7d
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
