@@ -1,0 +1,55 @@
+apiVersion: v2
+name: agent-platform
+version: 1.0.0
+description: Helm chart for deploying the AGENT AI Platform with comprehensive microservices architecture
+type: application
+appVersion: 1.0.0
+
+# Helm chart engine version requirement
+engine: ">=3.0.0"
+
+# Kubernetes version requirement
+kubeVersion: ">=1.27.0"
+
+# Chart metadata and documentation
+home: https://agent-platform.example.com
+sources:
+  - https://github.com/agent-ai/agent-platform
+
+# Keywords for chart discovery
+keywords:
+  - ai
+  - agents
+  - automation
+  - nlp
+  - integration
+  - microservices
+  - kubernetes
+
+# Chart maintainers
+maintainers:
+  - name: AGENT AI Platform Team
+    email: platform-team@agent-ai.com
+    role: Platform Engineering
+
+# Chart dependencies
+dependencies:
+  - name: istio
+    version: 1.18.0
+    repository: https://istio-release.storage.googleapis.com/charts
+    condition: istio.enabled
+
+  - name: prometheus
+    version: 15.0.0
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: prometheus.enabled
+
+  - name: redis
+    version: 17.0.0
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+
+  - name: postgresql
+    version: 12.0.0
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
