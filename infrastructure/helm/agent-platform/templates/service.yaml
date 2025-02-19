@@ -1,0 +1,92 @@
+{{- range $serviceName, $serviceConfig := .Values.services }}
+{{- if $serviceConfig.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agent-platform.componentName" (dict "component" $serviceName "context" $) }}
+  labels:
+    {{- include "agent-platform.labels" $ | nindent 4 }}
+    service.agent.ai/name: {{ $serviceName }}
+  annotations:
+    # Service Mesh Integration
+    {{- include "agent-platform.istioAnnotations" $ | nindent 4 }}
+    security.istio.io/tlsMode: {{ $serviceConfig.security.tlsEnabled | default "strict" | quote }}
+    security.istio.io/mtlsMode: {{ $serviceConfig.security.mtlsRequired | default "STRICT" | quote }}
+    
+    # Monitoring Integration
+    {{- include "agent-platform.monitoringAnnotations" $ | nindent 4 }}
+    
+    # Regional Topology
+    topology.kubernetes.io/region: {{ index $.Values.global.multiRegion.regions 0 }}
+    topology.kubernetes.io/zone: {{ index $.Values.global.multiRegion.regions 0 }}-a
+    
+    # Load Balancer Configuration (for external services)
+    {{- if eq $serviceConfig.type "LoadBalancer" }}
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-internal: {{ $serviceConfig.internal | default "false" | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{ $.Values.global.security.tlsCertArn | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+    {{- end }}
+
+spec:
+  type: {{ $serviceConfig.type }}
+  ports:
+    # Main service port
+    - port: {{ $serviceConfig.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+      {{- if eq $serviceConfig.type "LoadBalancer" }}
+      nodePort: {{ $serviceConfig.nodePort }}
+      {{- end }}
+    
+    # Metrics port for Prometheus scraping
+    - port: {{ $.Values.global.monitoring.metricsPort | default 9090 }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+    
+    # Health check port
+    - port: {{ $.Values.global.health.port | default 8081 }}
+      targetPort: health
+      protocol: TCP
+      name: health
+    
+    {{- if $serviceConfig.security.mtlsRequired }}
+    # mTLS port for secure service-to-service communication
+    - port: {{ $serviceConfig.port | add 1 }}
+      targetPort: https
+      protocol: TCP
+      name: https
+    {{- end }}
+
+  selector:
+    {{- include "agent-platform.selectorLabels" $ | nindent 4 }}
+    service.agent.ai/name: {{ $serviceName }}
+  
+  # Session Affinity Configuration
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 hours
+  
+  # Topology Aware Routing
+  topologyKeys:
+    - "kubernetes.io/hostname"
+    - "topology.kubernetes.io/zone"
+    - "topology.kubernetes.io/region"
+    - "*"
+
+  {{- if eq $serviceConfig.type "LoadBalancer" }}
+  # Load Balancer Configuration
+  loadBalancerSourceRanges:
+    {{- range $.Values.global.security.allowedIpRanges }}
+    - {{ . }}
+    {{- end }}
+  externalTrafficPolicy: Local
+  {{- end }}
+
+{{- end }}
+{{- end }}
