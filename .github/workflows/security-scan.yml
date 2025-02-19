@@ -1,0 +1,164 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:
+
+env:
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  SEVERITY_THRESHOLD: HIGH
+  SCAN_ENV: security
+  REPORT_PATH: ./security-reports
+  COMPLIANCE_MODE: strict
+  SCAN_TIMEOUT: 360
+  REPORT_RETENTION: 90
+  LANGUAGES: '["javascript", "typescript", "python", "go"]'
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Create report directories
+        run: |
+          mkdir -p ${{ env.REPORT_PATH }}/{sast,dependencies,containers,compliance}
+          echo "::set-output name=report_dir::${{ env.REPORT_PATH }}"
+
+  sast:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ env.LANGUAGES }}
+          queries: security-extended,security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:${{ matrix.language }}"
+          output: ${{ env.REPORT_PATH }}/sast
+
+      - name: Upload SAST Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: sast_results
+          path: ${{ env.REPORT_PATH }}/sast
+          retention-days: ${{ env.REPORT_RETENTION }}
+
+  dependency-check:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Node.js Dependency Scan
+        uses: snyk/actions/node@v1.4.0
+        with:
+          args: --severity-threshold=${{ env.SEVERITY_THRESHOLD }}
+          json: true
+          output: ${{ env.REPORT_PATH }}/dependencies/node.json
+
+      - name: Python Dependency Scan
+        run: |
+          pip install safety
+          safety check --json > ${{ env.REPORT_PATH }}/dependencies/python.json
+
+      - name: Go Dependency Scan
+        run: |
+          curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+          gosec -fmt=json -out=${{ env.REPORT_PATH }}/dependencies/go.json ./...
+
+      - name: Upload Dependency Scan Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency_scan
+          path: ${{ env.REPORT_PATH }}/dependencies
+          retention-days: ${{ env.REPORT_RETENTION }}
+
+  container-scan:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build_artifacts
+          path: ./artifacts
+
+      - name: Run Trivy Container Scan
+        uses: aquasecurity/trivy-action@0.11.2
+        with:
+          scan-type: 'fs,image'
+          format: 'template'
+          template: '@/contrib/sarif.tpl'
+          output: ${{ env.REPORT_PATH }}/containers/scan-results.sarif
+          severity: 'CRITICAL,HIGH'
+          timeout: ${{ env.SCAN_TIMEOUT }}
+
+      - name: Upload Container Scan Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: container_scan
+          path: ${{ env.REPORT_PATH }}/containers
+          retention-days: ${{ env.REPORT_RETENTION }}
+
+  compliance-report:
+    needs: [sast, dependency-check, container-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Scan Results
+        uses: actions/download-artifact@v3
+        with:
+          path: ${{ env.REPORT_PATH }}
+
+      - name: Generate Compliance Report
+        run: |
+          echo "Generating compliance report..."
+          {
+            echo "# Security Scan Compliance Report"
+            echo "## Generated: $(date -u)"
+            echo "### SAST Analysis"
+            jq -r '.[]' ${{ env.REPORT_PATH }}/sast_results/*.sarif
+            echo "### Dependency Analysis"
+            jq -r '.[]' ${{ env.REPORT_PATH }}/dependency_scan/*.json
+            echo "### Container Security"
+            jq -r '.[]' ${{ env.REPORT_PATH }}/container_scan/*.sarif
+          } > ${{ env.REPORT_PATH }}/compliance/compliance-report.md
+
+      - name: Upload Compliance Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: compliance_summary
+          path: ${{ env.REPORT_PATH }}/compliance
+          retention-days: ${{ env.REPORT_RETENTION }}
+
+      - name: Check Security Gates
+        run: |
+          critical_count=$(jq -r '[.[] | select(.severity=="CRITICAL")] | length' ${{ env.REPORT_PATH }}/*/scan-results.json)
+          high_count=$(jq -r '[.[] | select(.severity=="HIGH")] | length' ${{ env.REPORT_PATH }}/*/scan-results.json)
+          echo "::set-output name=critical_vulnerabilities::$critical_count"
+          echo "::set-output name=high_vulnerabilities::$high_count"
+          if [ "$critical_count" -gt 0 ]; then
+            echo "Critical vulnerabilities found!"
+            exit 1
+          fi
+
+      - name: Notify Security Team
+        if: failure()
+        run: |
+          echo "Security scan failed - critical vulnerabilities detected"
+          # Add notification logic here (e.g., Slack, email)
