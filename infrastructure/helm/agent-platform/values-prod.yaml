@@ -1,0 +1,198 @@
+# Production values for AGENT AI Platform
+# Implements high-availability, enterprise security, and performance optimizations
+
+global:
+  environment: production
+  replicaCount: 5  # Minimum replicas for HA
+  
+  image:
+    registry: docker.io
+    pullPolicy: Always  # Ensure latest security patches
+    tag: stable  # Production-grade stable images
+  
+  ingress:
+    enabled: true
+    className: istio
+    tls:
+      enabled: true
+      minVersion: TLS1_3  # Enterprise-grade security
+      
+  security:
+    enabled: true
+    auth:
+      provider: auth0
+      mfa:
+        enabled: true
+        enforced: true  # Mandatory MFA in production
+      sessionTimeout: 1800  # 30 minutes
+    encryption:
+      enabled: true
+      provider: aws-kms
+      keyRotation: true
+      keyRotationInterval: 30  # 30 days rotation in production
+    networkPolicies:
+      enabled: true
+      defaultDeny: true
+      allowedNamespaces:
+        - istio-system
+        - monitoring
+        - cert-manager
+
+  multiRegion:
+    enabled: true
+    regions:
+      - us-east-1
+      - eu-west-1
+      - ap-southeast-1
+    failover:
+      enabled: true
+      method: active-active  # Production-grade HA
+
+services:
+  api-gateway:
+    enabled: true
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 2Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 5
+      maxReplicas: 15
+      targetCPUUtilizationPercentage: 65
+      targetMemoryUtilizationPercentage: 75
+
+  nlp-engine:
+    enabled: true
+    resources:
+      requests:
+        cpu: 2000m
+        memory: 4Gi
+      limits:
+        cpu: 4000m
+        memory: 8Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 5
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 65
+      targetMemoryUtilizationPercentage: 75
+
+dependencies:
+  postgresql:
+    enabled: true
+    architecture: replication
+    auth:
+      enabled: true
+      username: agent_platform
+      existingSecret: agent-platform-db-credentials
+    primary:
+      persistence:
+        enabled: true
+        size: 100Gi  # Production data volume
+        storageClass: gp3-encrypted
+        backup:
+          enabled: true
+          schedule: "*/4 * * * *"  # Every 4 hours
+          retention: "30d"
+      resources:
+        requests:
+          cpu: 2000m
+          memory: 4Gi
+        limits:
+          cpu: 4000m
+          memory: 8Gi
+    readReplicas:
+      replicaCount: 3  # HA configuration
+      persistence:
+        enabled: true
+        size: 100Gi
+        storageClass: gp3-encrypted
+
+  redis:
+    enabled: true
+    architecture: replication
+    auth:
+      enabled: true
+      existingSecret: agent-platform-redis-credentials
+    master:
+      persistence:
+        enabled: true
+        size: 50Gi
+        storageClass: gp3-encrypted
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 2Gi
+        limits:
+          cpu: 2000m
+          memory: 4Gi
+    replica:
+      replicaCount: 3  # HA configuration
+      persistence:
+        enabled: true
+        size: 50Gi
+        storageClass: gp3-encrypted
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 2Gi
+        limits:
+          cpu: 2000m
+          memory: 4Gi
+
+  istio:
+    enabled: true
+    gateways:
+      replicaCount: 3  # HA configuration
+    virtualServices:
+      timeout: 3s
+      retries:
+        attempts: 3
+        perTryTimeout: 1s
+    global:
+      proxy:
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 400m
+            memory: 512Mi
+    pilot:
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 4Gi
+        limits:
+          cpu: 2000m
+          memory: 8Gi
+
+  prometheus:
+    enabled: true
+    server:
+      retention: 30d  # Production monitoring retention
+      replicaCount: 3  # HA configuration
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 4Gi
+        limits:
+          cpu: 2000m
+          memory: 8Gi
+    alertmanager:
+      enabled: true
+      persistence:
+        enabled: true
+        size: 20Gi
+        storageClass: gp3-encrypted
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
