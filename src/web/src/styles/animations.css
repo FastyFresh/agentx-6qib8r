@@ -1,0 +1,117 @@
+/* Material Design 3.0 Animation System v1.0.0 */
+
+/* Import animation timing variables and easing functions from variables.css */
+@import 'variables.css';
+
+/* Custom easing functions based on Material Design motion principles */
+:root {
+  --animation-duration-base: 300ms;
+  --animation-easing-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --animation-easing-accelerate: cubic-bezier(0.4, 0.0, 1, 1);
+  --animation-easing-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);
+}
+
+/* Keyframe Animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideIn {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Loading Spinner - GPU Accelerated */
+.spinner {
+  animation: spin 1s linear infinite;
+  will-change: transform;
+  transform-origin: center;
+  composite: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Fade In Animation - Optimized for Opacity Changes */
+.fade-in {
+  animation: fadeIn 0.3s var(--animation-easing-standard);
+  will-change: opacity;
+  composite: opacity;
+  backface-visibility: hidden;
+}
+
+/* Slide In Animation - Hardware Accelerated Transform */
+.slide-in {
+  animation: slideIn 0.3s var(--animation-easing-standard);
+  will-change: transform;
+  transform-origin: left;
+  composite: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Pulse Animation - Performance Optimized Scale Transform */
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+  will-change: transform;
+  transform-origin: center;
+  composite: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .fade-in,
+  .slide-in,
+  .pulse {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Animation Modifiers */
+.animation-fast {
+  animation-duration: 150ms;
+}
+
+.animation-slow {
+  animation-duration: 450ms;
+}
+
+.animation-delay-100 {
+  animation-delay: 100ms;
+}
+
+.animation-delay-200 {
+  animation-delay: 200ms;
+}
+
+/* Animation Utilities */
+.animate-pause {
+  animation-play-state: paused;
+}
+
+.animate-running {
+  animation-play-state: running;
+}
+
+.animate-once {
+  animation-iteration-count: 1;
+}
+
+.animate-infinite {
+  animation-iteration-count: infinite;
+}
