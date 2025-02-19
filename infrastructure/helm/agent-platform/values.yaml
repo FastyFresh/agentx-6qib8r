@@ -1,0 +1,164 @@
+# Default values for AGENT AI Platform Helm chart
+# This is a YAML-formatted file.
+
+global:
+  environment: default
+  replicaCount: 3
+  
+  image:
+    registry: docker.io
+    pullPolicy: IfNotPresent
+    tag: latest
+
+  # Security configuration with Auth0 integration and AWS KMS encryption
+  security:
+    enabled: true
+    auth:
+      provider: auth0
+      jwtValidation: true
+      mfa:
+        enabled: true
+        provider: auth0
+        methods:
+          - totp
+          - push
+      sessionTimeout: 3600  # in seconds
+    
+    encryption:
+      enabled: true
+      provider: aws-kms
+      keyRotation: true
+      keyRotationInterval: 90  # days
+    
+    networkPolicies:
+      enabled: true
+      defaultDeny: true
+      allowedNamespaces:
+        - istio-system
+        - monitoring
+
+  # Multi-region deployment configuration
+  multiRegion:
+    enabled: true
+    regions:
+      - us-east-1
+      - eu-west-1
+    failover:
+      enabled: true
+      method: active-passive
+
+# Service-specific configurations
+services:
+  nlp-engine:
+    enabled: true
+    image:
+      repository: agent-platform/nlp-engine
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 2Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+# Dependencies configuration
+dependencies:
+  postgresql:
+    enabled: true
+    architecture: replication
+    auth:
+      enabled: true
+      username: agent_platform
+      database: agent_platform
+    primary:
+      persistence:
+        enabled: true
+        size: 50Gi
+        backup:
+          enabled: true
+          schedule: "0 2 * * *"  # Daily at 2 AM
+          retention: "30d"
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 2Gi
+        limits:
+          cpu: 2000m
+          memory: 4Gi
+    readReplicas:
+      replicaCount: 2
+      persistence:
+        enabled: true
+        size: 50Gi
+
+  redis:
+    enabled: true
+    architecture: replication
+    auth:
+      enabled: true
+    master:
+      persistence:
+        enabled: true
+        size: 20Gi
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+    replica:
+      replicaCount: 2
+      persistence:
+        enabled: true
+        size: 20Gi
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+
+  prometheus:
+    enabled: true
+    server:
+      retention: 30d
+      resources:
+        requests:
+          cpu: 500m
+          memory: 2Gi
+        limits:
+          cpu: 1000m
+          memory: 4Gi
+    alertmanager:
+      enabled: true
+      persistence:
+        enabled: true
+        size: 10Gi
+
+  istio:
+    enabled: true
+    global:
+      proxy:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+    pilot:
+      resources:
+        requests:
+          cpu: 500m
+          memory: 2Gi
+        limits:
+          cpu: 1000m
+          memory: 4Gi
