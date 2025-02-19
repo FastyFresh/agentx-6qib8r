@@ -1,0 +1,204 @@
+/* normalize.css v8.0.1 */
+@import 'normalize.css';
+
+/* Import design tokens and variables */
+@import './variables.css';
+@import './typography.css';
+
+/* Global Box Sizing Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Document Root Styles */
+html {
+  font-size: var(--font-size-base);
+  scroll-behavior: smooth;
+  text-size-adjust: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-family-primary);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  min-height: 100%;
+}
+
+/* Material Design Surface Styles */
+.md-surface {
+  background: var(--color-surface);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  transition: box-shadow var(--transition-normal);
+}
+
+.md-surface:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Fluid Typography Function */
+@function fluid-type($min-size, $max-size, $min-viewport, $max-viewport) {
+  $slope: ($max-size - $min-size) / ($max-viewport - $min-viewport);
+  $base-size: $min-size - ($slope * $min-viewport);
+  
+  @return clamp(#{$min-size}px, #{$base-size}px + #{$slope * 100}vw, #{$max-size}px);
+}
+
+/* Responsive Layout Utilities */
+@media (--mobile) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (--tablet) {
+  .hide-tablet {
+    display: none !important;
+  }
+}
+
+@media (--desktop) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* Accessibility Utilities */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--color-primary);
+  color: var(--color-surface);
+  padding: var(--spacing-scale-3);
+  z-index: var(--z-index-tooltip);
+  transition: top var(--transition-fast);
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Focus States */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High Contrast Mode */
+@media (forced-colors: active) {
+  .md-surface {
+    border: 1px solid CanvasText;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .md-surface {
+    box-shadow: none !important;
+    border: 1px solid #000;
+  }
+
+  .skip-link,
+  .visually-hidden {
+    display: none !important;
+  }
+}
+
+/* Interactive States */
+.interactive {
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.interactive:hover {
+  transform: translateY(-2px);
+}
+
+.interactive:active {
+  transform: translateY(0);
+}
+
+/* Layout Helpers */
+.full-width {
+  width: 100%;
+}
+
+.full-height {
+  height: 100%;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Spacing Utilities */
+.margin-top {
+  margin-top: var(--spacing-scale-3);
+}
+
+.margin-bottom {
+  margin-bottom: var(--spacing-scale-3);
+}
+
+.padding {
+  padding: var(--spacing-scale-3);
+}
+
+/* Text Utilities */
+.text-center {
+  text-align: center;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Color Utilities */
+.text-primary {
+  color: var(--color-primary);
+}
+
+.text-error {
+  color: var(--color-error);
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.text-warning {
+  color: var(--color-warning);
+}
