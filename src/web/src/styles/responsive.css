@@ -1,0 +1,202 @@
+/* Core responsive stylesheet for AGENT AI Platform
+ * Implements mobile-first responsive design patterns with progressive enhancement
+ * Supports F-pattern and Z-pattern layouts with container queries
+ * Version: 1.0.0
+ */
+
+/* Base Mobile-First Styles (>= 320px) */
+.container {
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--spacing-unit);
+}
+
+/* Z-Pattern Layout (Mobile) */
+.z-pattern {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit);
+}
+
+@supports (display: grid) {
+  .z-pattern {
+    display: grid;
+    grid-template-areas: 
+      "header"
+      "main"
+      "nav";
+    gap: var(--spacing-unit);
+  }
+}
+
+/* F-Pattern Layout */
+.f-pattern {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit);
+}
+
+@supports (display: grid) {
+  .f-pattern {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-unit);
+  }
+}
+
+/* Modern Grid Layout with Fallback */
+.modern-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-unit);
+}
+
+@supports (display: grid) {
+  .modern-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-unit);
+  }
+}
+
+/* Container Queries Support */
+.container-query {
+  width: 100%;
+  max-width: var(--breakpoint-large);
+}
+
+@supports (container-type: inline-size) {
+  .container-query {
+    container-type: inline-size;
+    container-name: responsive-container;
+  }
+}
+
+/* Responsive Utility Classes */
+.hide-mobile {
+  display: none !important;
+}
+
+.show-mobile-only {
+  display: block !important;
+}
+
+/* Tablet Breakpoint (>= 768px) */
+@media (min-width: 768px) {
+  .hide-mobile {
+    display: block !important;
+  }
+
+  .show-mobile-only {
+    display: none !important;
+  }
+
+  .hide-tablet {
+    display: none !important;
+  }
+
+  .f-pattern {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: calc(var(--spacing-unit) * 2);
+  }
+
+  .z-pattern {
+    grid-template-areas: 
+      "header header"
+      "main nav";
+  }
+}
+
+/* Desktop Breakpoint (>= 1024px) */
+@media (min-width: 1024px) {
+  .hide-tablet {
+    display: block !important;
+  }
+
+  .hide-desktop {
+    display: none !important;
+  }
+
+  .f-pattern {
+    grid-template-columns: repeat(3, 1fr);
+    gap: calc(var(--spacing-unit) * 3);
+  }
+
+  .z-pattern {
+    grid-template-areas: 
+      "header header header"
+      "main main nav";
+  }
+}
+
+/* Large Desktop Breakpoint (>= 1440px) */
+@media (min-width: 1440px) {
+  .container {
+    max-width: 1400px;
+  }
+}
+
+/* High DPI Screens */
+@media (min-resolution: 2dppx) {
+  .high-res-optimized {
+    background-image: url('@2x.png');
+    background-size: contain;
+  }
+}
+
+/* Navigation Styles */
+.navigation {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 767px) {
+  .navigation {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: var(--z-index-modal);
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+/* Progressive Enhancement for Modern Layout Features */
+@supports (display: flex) {
+  .flex-enhanced {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-unit);
+  }
+}
+
+@supports (display: grid) {
+  .grid-enhanced {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--spacing-unit);
+  }
+}
+
+/* Print Styles */
+@media print {
+  .hide-print {
+    display: none !important;
+  }
+
+  .container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
