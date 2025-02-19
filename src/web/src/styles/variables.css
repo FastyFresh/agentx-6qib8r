@@ -1,0 +1,104 @@
+/* @fontsource/roboto v5.0.8 */
+@import '@fontsource/roboto/400.css';
+@import '@fontsource/roboto/500.css';
+@import '@fontsource/roboto/700.css';
+
+/* Light Theme (Default) */
+:root {
+  /* Color System */
+  --color-primary: #2196F3;
+  --color-primary-light: #64B5F6;
+  --color-primary-dark: #1976D2;
+  --color-secondary: #64B5F6;
+  --color-error: #D32F2F;
+  --color-warning: #FFA000;
+  --color-success: #388E3C;
+  --color-surface: #FFFFFF;
+  --color-background: #F5F5F5;
+  --color-text-primary: #333333;
+  --color-text-secondary: #666666;
+  --color-overlay: rgba(0, 0, 0, 0.5);
+
+  /* Typography */
+  --font-family-primary: Roboto, system-ui, -apple-system, sans-serif;
+  --font-size-base: 16px;
+  --font-size-scale: 1.25;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Spacing System - Based on 8px grid */
+  --spacing-unit: 8px;
+  --spacing-scale-1: calc(var(--spacing-unit) * 0.25); /* 2px */
+  --spacing-scale-2: calc(var(--spacing-unit) * 0.5);  /* 4px */
+  --spacing-scale-3: var(--spacing-unit);              /* 8px */
+  --spacing-scale-4: calc(var(--spacing-unit) * 1.5);  /* 12px */
+  --spacing-scale-5: calc(var(--spacing-unit) * 2);    /* 16px */
+
+  /* Border Radius */
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* Breakpoints */
+  --breakpoint-mobile: 320px;
+  --breakpoint-tablet: 768px;
+  --breakpoint-desktop: 1024px;
+  --breakpoint-large: 1440px;
+
+  /* Transitions */
+  --transition-fast: 150ms;
+  --transition-normal: 300ms;
+  --transition-slow: 500ms;
+
+  /* Z-Index Scale */
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1100;
+  --z-index-modal: 1200;
+  --z-index-tooltip: 1300;
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+  --color-primary: #64B5F6;
+  --color-primary-light: #90CAF9;
+  --color-primary-dark: #42A5F5;
+  --color-secondary: #2196F3;
+  --color-error: #EF5350;
+  --color-warning: #FFB74D;
+  --color-success: #66BB6A;
+  --color-surface: #1E1E1E;
+  --color-background: #121212;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #CCCCCC;
+  --color-overlay: rgba(0, 0, 0, 0.75);
+}
+
+/* Media Query Mixins */
+@custom-media --mobile (min-width: 320px);
+@custom-media --tablet (min-width: 768px);
+@custom-media --desktop (min-width: 1024px);
+@custom-media --large (min-width: 1440px);
+
+/* System Preference Based Theme */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-primary: #64B5F6;
+    --color-primary-light: #90CAF9;
+    --color-primary-dark: #42A5F5;
+    --color-secondary: #2196F3;
+    --color-error: #EF5350;
+    --color-warning: #FFB74D;
+    --color-success: #66BB6A;
+    --color-surface: #1E1E1E;
+    --color-background: #121212;
+    --color-text-primary: #FFFFFF;
+    --color-text-secondary: #CCCCCC;
+    --color-overlay: rgba(0, 0, 0, 0.75);
+  }
+}
