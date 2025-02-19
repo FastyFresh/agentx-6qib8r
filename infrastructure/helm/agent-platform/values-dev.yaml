@@ -1,0 +1,136 @@
+# Development environment values for AGENT AI Platform
+# Overrides default values for development and testing purposes
+
+global:
+  environment: development
+  replicaCount: 1  # Single replica for dev environment
+  
+  image:
+    registry: docker.io
+    pullPolicy: Always  # Always pull latest dev images
+    tag: dev
+
+  ingress:
+    enabled: true
+    className: istio
+    annotations:
+      kubernetes.io/ingress.class: istio
+      cert-manager.io/cluster-issuer: letsencrypt-staging  # Use staging cert issuer for dev
+    tls:
+      enabled: true  # Enable TLS even in dev for consistency
+
+  security:
+    enabled: true
+    auth:
+      provider: auth0
+      jwtValidation: true
+      mfa:
+        enabled: false  # Disable MFA for development ease
+    encryption:
+      enabled: true
+      provider: aws-kms
+    networkPolicies:
+      enabled: false  # Disable network policies for easier development
+      defaultDeny: false
+
+  debug:
+    enabled: true
+    verbose: true
+    hotReload: true
+
+# Service-specific development configurations
+services:
+  nlp-engine:
+    enabled: true
+    image:
+      repository: agent-platform/nlp-engine
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+    autoscaling:
+      enabled: false  # Disable autoscaling in dev
+
+# Development-optimized dependency configurations
+dependencies:
+  postgresql:
+    enabled: true
+    architecture: standalone  # Single instance for dev
+    auth:
+      enabled: true
+      username: agent_platform
+      database: agent_platform
+    primary:
+      persistence:
+        enabled: true
+        size: 10Gi  # Reduced size for dev
+        backup:
+          enabled: false  # Disable backups in dev
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+    readReplicas:
+      replicaCount: 0  # No read replicas in dev
+
+  redis:
+    enabled: true
+    architecture: standalone  # Single instance for dev
+    auth:
+      enabled: true
+    master:
+      persistence:
+        enabled: true
+        size: 5Gi  # Reduced size for dev
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+    replica:
+      replicaCount: 0  # No replicas in dev
+
+  prometheus:
+    enabled: true
+    server:
+      retention: 7d  # Reduced retention for dev
+      resources:
+        requests:
+          cpu: 250m
+          memory: 1Gi
+        limits:
+          cpu: 500m
+          memory: 2Gi
+    alertmanager:
+      enabled: true
+      persistence:
+        enabled: true
+        size: 5Gi  # Reduced size for dev
+
+  istio:
+    enabled: true
+    global:
+      proxy:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+    pilot:
+      resources:
+        requests:
+          cpu: 250m
+          memory: 1Gi
+        limits:
+          cpu: 500m
+          memory: 2Gi
