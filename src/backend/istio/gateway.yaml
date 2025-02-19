@@ -1,0 +1,81 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: agent-platform-gateway
+  namespace: agent-platform
+  labels:
+    app: agent-platform-gateway
+    version: v1
+    environment: ${ENV}
+    region: ${REGION}
+  annotations:
+    kubernetes.io/ingress.class: "istio"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "15020"
+spec:
+  selector:
+    istio: ingressgateway
+    app: agent-platform-gateway
+    region: ${REGION}
+    environment: ${ENV}
+  servers:
+    # Primary HTTPS server configuration with enhanced security
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - "*.agent-platform.com"
+      tls:
+        mode: SIMPLE
+        credentialName: agent-platform-tls
+        minProtocolVersion: TLSV1_3
+        cipherSuites:
+          - ECDHE-ECDSA-AES256-GCM-SHA384
+          - ECDHE-RSA-AES256-GCM-SHA384
+      # Enhanced security headers
+      tls.httpsRedirect: true
+      tls.securityHeaders:
+        strictTransportSecurity: "max-age=31536000; includeSubDomains"
+        xContentTypeOptions: "nosniff"
+        xFrameOptions: "DENY"
+        xXssProtection: "1; mode=block"
+    
+    # HTTP server configuration with mandatory HTTPS redirect
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*.agent-platform.com"
+      tls:
+        httpsRedirect: true
+
+  # Multi-region load balancing configuration
+  loadBalancerSettings:
+    simple: ROUND_ROBIN
+    consistentHash:
+      httpHeaderName: x-region
+    localityLbSettings:
+      enabled: true
+      failover:
+        - from: ${REGION}
+          to: ${FAILOVER_REGION}
+
+  # Connection pool settings for high availability
+  connectionPool:
+    tcp:
+      maxConnections: 1000
+      connectTimeout: 5s
+    http:
+      http2MaxRequests: 1000
+      maxRequestsPerConnection: 100
+      maxRetries: 3
+
+  # Circuit breaker settings
+  outlierDetection:
+    consecutiveErrors: 5
+    interval: 30s
+    baseEjectionTime: 60s
+    maxEjectionPercent: 50
