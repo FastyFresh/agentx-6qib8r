@@ -1,0 +1,168 @@
+{{/* Generate HPAs for each service with enhanced security and monitoring */}}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+{{- range $serviceName, $serviceConfig := .Values.services }}
+{{- if and $serviceConfig.enabled $serviceConfig.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "agent-platform.componentName" (dict "component" $serviceName "context" $) }}
+  labels:
+    {{- include "agent-platform.labels" $ | nindent 4 }}
+    service: {{ $serviceName }}
+  annotations:
+    security.agent.ai/autoscaling: "enabled"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: {{ $.Values.global.monitoring.metricsPort | default "9090" | quote }}
+    {{- if $.Values.global.multiRegion.enabled }}
+    multiregion.agent.ai/enabled: "true"
+    multiregion.agent.ai/regions: {{ join "," $.Values.global.multiRegion.regions | quote }}
+    {{- end }}
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "agent-platform.componentName" (dict "component" $serviceName "context" $) }}
+  
+  {{- /* Region-aware replica configuration */}}
+  minReplicas: {{ $serviceConfig.autoscaling.minReplicas | default $.Values.global.replicaCount }}
+  maxReplicas: {{ $serviceConfig.autoscaling.maxReplicas | default (mul ($.Values.global.replicaCount) 3) }}
+  
+  metrics:
+  {{- /* CPU-based scaling */}}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ $serviceConfig.autoscaling.targetCPUUtilizationPercentage | default 70 }}
+  
+  {{- /* Memory-based scaling */}}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ $serviceConfig.autoscaling.targetMemoryUtilizationPercentage | default 80 }}
+  
+  {{- /* Service-specific custom metrics */}}
+  {{- if eq $serviceName "nlp-engine" }}
+  - type: Pods
+    pods:
+      metric:
+        name: inference_queue_length
+      target:
+        type: AverageValue
+        averageValue: "10"
+  {{- else if eq $serviceName "api-gateway" }}
+  - type: Pods
+    pods:
+      metric:
+        name: http_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "1000"
+  {{- else if eq $serviceName "agent-generator" }}
+  - type: Pods
+    pods:
+      metric:
+        name: agent_creation_queue_length
+      target:
+        type: AverageValue
+        averageValue: "5"
+  {{- end }}
+  
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: {{ div $serviceConfig.autoscaling.maxReplicas 4 | default 4 }}
+        periodSeconds: 60
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      selectPolicy: Max
+    
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: {{ div $serviceConfig.autoscaling.minReplicas 2 | default 2 }}
+        periodSeconds: 60
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      selectPolicy: Min
+
+{{- end }}
+{{- end }}
+
+{{- /* Region-specific HPA configurations */}}
+{{- if .Values.global.multiRegion.enabled }}
+{{- range .Values.global.multiRegion.regions }}
+{{- $region := . }}
+{{- range $serviceName, $serviceConfig := $.Values.services }}
+{{- if and $serviceConfig.enabled $serviceConfig.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "agent-platform.componentName" (dict "component" (printf "%s-%s" $serviceName $region) "context" $) }}
+  labels:
+    {{- include "agent-platform.labels" $ | nindent 4 }}
+    service: {{ $serviceName }}
+    region: {{ $region }}
+  annotations:
+    multiregion.agent.ai/region: {{ $region }}
+    security.agent.ai/autoscaling: "enabled"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: {{ $.Values.global.monitoring.metricsPort | default "9090" | quote }}
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "agent-platform.componentName" (dict "component" (printf "%s-%s" $serviceName $region) "context" $) }}
+  
+  {{- /* Region-specific replica configuration */}}
+  minReplicas: {{ $serviceConfig.autoscaling.minReplicas | default $.Values.global.replicaCount }}
+  maxReplicas: {{ $serviceConfig.autoscaling.maxReplicas | default (mul ($.Values.global.replicaCount) 3) }}
+  
+  {{- /* Include same metrics configuration as above */}}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ $serviceConfig.autoscaling.targetCPUUtilizationPercentage | default 70 }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ $serviceConfig.autoscaling.targetMemoryUtilizationPercentage | default 80 }}
+
+  behavior:
+    {{- /* Region-specific scaling behavior */}}
+    scaleUp:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: {{ div $serviceConfig.autoscaling.maxReplicas 4 | default 4 }}
+        periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: {{ div $serviceConfig.autoscaling.minReplicas 2 | default 2 }}
+        periodSeconds: 60
+
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
