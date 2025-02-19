@@ -1,0 +1,252 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  CI: true
+  NODE_ENV: test
+  PYTHON_ENV: test
+  GO_ENV: test
+  COVERAGE_THRESHOLD: 85
+  BUILD_TIMEOUT: 30
+  NODE_VERSION: 20.x
+  PYTHON_VERSION: 3.11
+  GO_VERSION: 1.20
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            **/node_modules
+            ~/.cache/pip
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/yarn.lock', '**/package-lock.json', '**/requirements.txt', '**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+
+      - name: Install dependencies
+        run: |
+          yarn install --frozen-lockfile
+          npm ci
+          pip install -r requirements.txt
+          go mod download
+
+      - name: Lint Frontend
+        run: yarn lint
+
+      - name: Lint Backend
+        run: npm run lint
+
+      - name: Lint Python
+        run: |
+          pip install flake8 black
+          flake8 .
+          black --check .
+
+      - name: Lint Go
+        run: |
+          go install golang.org/x/lint/golint@latest
+          golint ./...
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            **/node_modules
+            ~/.cache/pip
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/yarn.lock', '**/package-lock.json', '**/requirements.txt', '**/go.sum') }}
+
+      - name: Run Frontend Tests
+        run: |
+          yarn test --coverage
+          yarn test:e2e
+        env:
+          CI: true
+
+      - name: Run Backend Tests
+        run: npm test -- --coverage
+
+      - name: Run Python Tests
+        run: |
+          pip install pytest pytest-cov
+          pytest --cov=./ --cov-report=xml
+
+      - name: Run Go Tests
+        run: |
+          go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+      - name: Check Coverage Threshold
+        run: |
+          echo "Checking coverage threshold of ${{ env.COVERAGE_THRESHOLD }}%"
+          jq -e ".total.lines.pct >= ${{ env.COVERAGE_THRESHOLD }}" coverage/coverage-summary.json
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test_results
+          path: |
+            coverage/
+            .coverage
+            coverage.txt
+            test-results/
+            pytest.xml
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build Frontend
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+        env:
+          NODE_ENV: production
+
+      - name: Build Backend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Python Services
+        run: |
+          pip install pyinstaller
+          pyinstaller --onefile src/main.py
+
+      - name: Build Go Services
+        run: |
+          go build -v -o dist/go-services ./...
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build_artifacts
+          path: |
+            dist/
+            build/
+            frontend_dist/
+            backend_dist/
+            python_dist/
+            go_dist/
+
+  security:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run SAST Scan
+        uses: github/codeql-action/analyze@v2
+        with:
+          languages: javascript, python, go
+
+      - name: Run Dependency Scan
+        run: |
+          yarn audit
+          npm audit
+          pip install safety
+          safety check
+          go list -json -m all | nancy sleuth
+
+      - name: Run Container Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Check for Secrets
+        uses: gitleaks/gitleaks-action@v2
+
+      - name: Upload Security Reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security_reports
+          path: |
+            **/security-results/
+            **/trivy-results/
+            **/gitleaks-results/
